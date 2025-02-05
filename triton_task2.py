@@ -10,6 +10,7 @@ Original file is located at
 from triton.runtime import driver
 import os
 import torch
+import sys
 
 import triton
 import triton.language as tl
@@ -528,7 +529,8 @@ def benchmark(M, N, K, kernel):
 
 
 os.environ["MLIR_ENABLE_DUMP"] = "1"
-os.environ["LLVM_IR_ENABLE_DUMP"] = "1"
-os.environ["MLIR_DUMP_PATH"] = "dump.mlir"
-benchmark.run(show_plots=True, print_data=True, save_path=os.path.join(
+mlir_dump_path = os.path.join(os.environ.get("SLURM_TMPDIR"), "dump.mlir")
+sys.stderr = open(mlir_dump_path, "w")
+sys.stderr.reconfigure(line_buffering=True, write_through=True)
+benchmark.run(show_plots=False, print_data=False, save_path=os.path.join(
     os.environ.get("SLURM_TMPDIR"), os.path.basename("results")))
