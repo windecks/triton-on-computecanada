@@ -7,12 +7,15 @@ Original file is located at
     https://colab.research.google.com/drive/1B5bMOg8pEQc94e5WQR5QapikvHsxbMjX
 """
 
+from triton.runtime import driver
+import os
 import torch
 
 import triton
 import triton.language as tl
 
 # Matmul kernel
+
 
 def get_cuda_autotune_config():
     return [
@@ -51,6 +54,7 @@ def get_cuda_autotune_config():
                       num_warps=4)
     ]
 
+
 @triton.autotune(configs=get_cuda_autotune_config(), key=["M", "N", "K"])
 @triton.jit
 def matmul_kernel(
@@ -77,21 +81,27 @@ def matmul_kernel(
     offs_am = (pid_m * BLOCK_SIZE_M + tl.arange(0, BLOCK_SIZE_M)) % M
     offs_bn = (pid_n * BLOCK_SIZE_N + tl.arange(0, BLOCK_SIZE_N)) % N
     offs_k = tl.arange(0, BLOCK_SIZE_K)
-    a_ptrs = a_ptr + (offs_am[:, None] * stride_am + offs_k[None, :] * stride_ak)
-    b_ptrs = b_ptr + (offs_k[:, None] * stride_bk + offs_bn[None, :] * stride_bn)
+    a_ptrs = a_ptr + (offs_am[:, None] * stride_am +
+                      offs_k[None, :] * stride_ak)
+    b_ptrs = b_ptr + (offs_k[:, None] * stride_bk +
+                      offs_bn[None, :] * stride_bn)
     accumulator = tl.zeros((BLOCK_SIZE_M, BLOCK_SIZE_N), dtype=tl.float32)
     for k in range(0, tl.cdiv(K, BLOCK_SIZE_K)):
-        a = tl.load(a_ptrs, mask=offs_k[None, :] < K - k * BLOCK_SIZE_K, other=0.0)
-        b = tl.load(b_ptrs, mask=offs_k[:, None] < K - k * BLOCK_SIZE_K, other=0.0)
+        a = tl.load(a_ptrs, mask=offs_k[None, :]
+                    < K - k * BLOCK_SIZE_K, other=0.0)
+        b = tl.load(b_ptrs, mask=offs_k[:, None]
+                    < K - k * BLOCK_SIZE_K, other=0.0)
         accumulator = tl.dot(a, b, accumulator)
         a_ptrs += BLOCK_SIZE_K * stride_ak
         b_ptrs += BLOCK_SIZE_K * stride_bk
     c = accumulator.to(tl.float16)
     offs_cm = pid_m * BLOCK_SIZE_M + tl.arange(0, BLOCK_SIZE_M)
     offs_cn = pid_n * BLOCK_SIZE_N + tl.arange(0, BLOCK_SIZE_N)
-    c_ptrs = c_ptr + stride_cm * offs_cm[:, None] + stride_cn * offs_cn[None, :]
+    c_ptrs = c_ptr + stride_cm * \
+        offs_cm[:, None] + stride_cn * offs_cn[None, :]
     c_mask = (offs_cm[:, None] < M) & (offs_cn[None, :] < N)
     tl.store(c_ptrs, c, mask=c_mask)
+
 
 def matmul(a, b):
     # Check constraints.
@@ -102,7 +112,9 @@ def matmul(a, b):
     # Allocates output.
     c = torch.empty((M, N), device=a.device, dtype=torch.float16)
     # 1D launch kernel where each block gets its own program.
-    grid = lambda META: (triton.cdiv(M, META['BLOCK_SIZE_M']) * triton.cdiv(N, META['BLOCK_SIZE_N']), )
+
+    def grid(META): return (triton.cdiv(
+        M, META['BLOCK_SIZE_M']) * triton.cdiv(N, META['BLOCK_SIZE_N']), )
     matmul_kernel[grid](
         a, b, c,  #
         M, N, K,  #
@@ -112,9 +124,10 @@ def matmul(a, b):
     )
     return c
 
-from triton.runtime import driver
 
 # Fused softmax kernel
+
+
 @triton.jit
 def softmax_kernel(output_ptr, input_ptr, input_row_stride, output_row_stride, n_rows, n_cols, BLOCK_SIZE: tl.constexpr,
                    num_stages: tl.constexpr):
@@ -142,6 +155,7 @@ def softmax_kernel(output_ptr, input_ptr, input_row_stride, output_row_stride, n
         output_ptrs = output_row_start_ptr + col_offsets
         tl.store(output_ptrs, softmax_output, mask=mask)
 
+
 DEVICE = torch.device("cuda:0")
 properties = driver.active.utils.get_device_properties(DEVICE.index)
 NUM_SM = properties["multiprocessor_count"]
@@ -150,6 +164,7 @@ SIZE_SMEM = properties["max_shared_mem"]
 WARP_SIZE = properties["warpSize"]
 target = triton.runtime.driver.active.get_current_target()
 kernels = {}
+
 
 def softmax(x):
     n_rows, n_cols = x.shape
@@ -192,6 +207,7 @@ def softmax(x):
         n_cols,
     )
     return y
+
 
 @triton.jit
 def _layer_norm_fwd_fused(
@@ -363,6 +379,7 @@ def _layer_norm_bwd_dwdb(DW,  # pointer to the partial sum of weights gradient
     tl.store(FINAL_DW + cols, sum_dw, mask=cols < N)
     tl.store(FINAL_DB + cols, sum_db, mask=cols < N)
 
+
 class LayerNorm(torch.autograd.Function):
 
     @staticmethod
@@ -378,7 +395,8 @@ class LayerNorm(torch.autograd.Function):
         MAX_FUSED_SIZE = 65536 // x.element_size()
         BLOCK_SIZE = min(MAX_FUSED_SIZE, triton.next_power_of_2(N))
         if N > BLOCK_SIZE:
-            raise RuntimeError("This layer norm doesn't support feature dim >= 64KB.")
+            raise RuntimeError(
+                "This layer norm doesn't support feature dim >= 64KB.")
         # heuristics for number of warps
         num_warps = min(max(BLOCK_SIZE // 256, 1), 8)
         # enqueue kernel
@@ -398,11 +416,15 @@ class LayerNorm(torch.autograd.Function):
         # heuristics for amount of parallel reduction stream for DW/DB
         N = w.shape[0]
         GROUP_SIZE_M = 64
-        if N <= 8192: GROUP_SIZE_M = 96
-        if N <= 4096: GROUP_SIZE_M = 128
-        if N <= 1024: GROUP_SIZE_M = 256
+        if N <= 8192:
+            GROUP_SIZE_M = 96
+        if N <= 4096:
+            GROUP_SIZE_M = 128
+        if N <= 1024:
+            GROUP_SIZE_M = 256
         # allocate output
-        locks = torch.zeros(2 * GROUP_SIZE_M, dtype=torch.int32, device=w.device)
+        locks = torch.zeros(
+            2 * GROUP_SIZE_M, dtype=torch.int32, device=w.device)
         _dw = torch.zeros((GROUP_SIZE_M, N), dtype=x.dtype, device=w.device)
         _db = torch.zeros((GROUP_SIZE_M, N), dtype=x.dtype, device=w.device)
         dw = torch.empty((N, ), dtype=w.dtype, device=w.device)
@@ -418,7 +440,8 @@ class LayerNorm(torch.autograd.Function):
             BLOCK_SIZE_N=ctx.BLOCK_SIZE,  #
             GROUP_SIZE_M=GROUP_SIZE_M,  #
             num_warps=ctx.num_warps)
-        grid = lambda meta: [triton.cdiv(N, meta['BLOCK_SIZE_N'])]
+
+        def grid(meta): return [triton.cdiv(N, meta['BLOCK_SIZE_N'])]
         # accumulate partial sums in separate kernel
         _layer_norm_bwd_dwdb[grid](
             _dw, _db, dw, db, min(GROUP_SIZE_M, M), N,  #
@@ -429,31 +452,33 @@ class LayerNorm(torch.autograd.Function):
 
 layer_norm = LayerNorm.apply
 
-import os
 DEVICE = torch.device("cuda:0")
 
 configs = [
     triton.testing.Benchmark(
-      x_names=["K"],
-      x_vals=[i for i in range(1024, 8193, 1024)],
-      line_arg="kernel",
-      line_vals=["matmul"],
-      line_names=["Matmul"],
-      styles=[("green", "-")],
-      ylabel="Mean Runtime (ms)",
-      plot_name="matmul-performance",
-      args={"M": 2048, "N": 2048}
+        x_names=["K"],
+        x_vals=[i for i in range(1024, 8193, 1024)],
+        line_arg="kernel",
+        line_vals=["matmul"],
+        line_names=["Matmul"],
+        styles=[("green", "-")],
+        ylabel="Mean Runtime (ms)",
+        plot_name="matmul-performance",
+        args={"M": 2048, "N": 2048}
     ),
     triton.testing.Benchmark(
-      x_names=['N'],  # argument names to use as an x-axis for the plot
-      x_vals=[512 * i for i in range(2, 32)],  # different possible values for `x_name`
-      line_arg="kernel",
-      line_vals=["fused-softmax"],
-      line_names=["Fused Softmax"],
-      styles=[('green', '-')],  # line styles
-      ylabel="Mean Runtime (ms)",  # label name for the y-axis
-      plot_name="softmax-performance",  # name for the plot. Used also as a file name for saving the plot.
-      args={'M': 4096, "K": 0},  # values for function arguments not in `x_names` and `y_name`
+        x_names=['N'],  # argument names to use as an x-axis for the plot
+        # different possible values for `x_name`
+        x_vals=[512 * i for i in range(2, 32)],
+        line_arg="kernel",
+        line_vals=["fused-softmax"],
+        line_names=["Fused Softmax"],
+        styles=[('green', '-')],  # line styles
+        ylabel="Mean Runtime (ms)",  # label name for the y-axis
+        # name for the plot. Used also as a file name for saving the plot.
+        plot_name="softmax-performance",
+        # values for function arguments not in `x_names` and `y_name`
+        args={'M': 4096, "K": 0},
     ),
     triton.testing.Benchmark(
         x_names=['N'],
@@ -466,36 +491,44 @@ configs = [
         plot_name='layer-norm-backward',
         args={'M': 4096, "K": 0},
     )
-    ]
+]
+
 
 @triton.testing.perf_report(configs)
 def benchmark(M, N, K, kernel):
-  if kernel == "matmul":
-    a = torch.randn((M, K), device=DEVICE, dtype=torch.float16)
-    b = torch.randn((K, N), device=DEVICE, dtype=torch.float16)
-    ms = triton.testing.do_bench(lambda: matmul(a, b))
-    return ms
-  elif kernel == "fused-softmax":
-    x = torch.randn(M, N, device=DEVICE, dtype=torch.float16)
-    stream = getattr(torch, DEVICE.type).Stream()
-    getattr(torch, DEVICE.type).set_stream(stream)
-    ms = triton.testing.do_bench(lambda: softmax(x))
-    return ms
-  elif kernel == "layer-norm":
-    x_shape = (M, N)
-    w_shape = (x_shape[-1], )
-    weight = torch.rand(w_shape, dtype=torch.float16, device=DEVICE, requires_grad=True)
-    bias = torch.rand(w_shape, dtype=torch.float16, device=DEVICE, requires_grad=True)
-    x = -2.3 + 0.5 * torch.randn(x_shape, dtype=torch.float16, device=DEVICE)
-    dy = .1 * torch.randn_like(x)
-    x.requires_grad_(True)
-    def y_fwd():
-      return layer_norm(x, w_shape, weight, bias, 1e-5)
-    y = y_fwd()
-    ms = triton.testing.do_bench(lambda: y.backward(dy, retain_graph=True), grad_to_none=[x], rep=500)
-    return ms
+    if kernel == "matmul":
+        a = torch.randn((M, K), device=DEVICE, dtype=torch.float16)
+        b = torch.randn((K, N), device=DEVICE, dtype=torch.float16)
+        ms = triton.testing.do_bench(lambda: matmul(a, b))
+        return ms
+    elif kernel == "fused-softmax":
+        x = torch.randn(M, N, device=DEVICE, dtype=torch.float16)
+        stream = getattr(torch, DEVICE.type).Stream()
+        getattr(torch, DEVICE.type).set_stream(stream)
+        ms = triton.testing.do_bench(lambda: softmax(x))
+        return ms
+    elif kernel == "layer-norm":
+        x_shape = (M, N)
+        w_shape = (x_shape[-1], )
+        weight = torch.rand(w_shape, dtype=torch.float16,
+                            device=DEVICE, requires_grad=True)
+        bias = torch.rand(w_shape, dtype=torch.float16,
+                          device=DEVICE, requires_grad=True)
+        x = -2.3 + 0.5 * \
+            torch.randn(x_shape, dtype=torch.float16, device=DEVICE)
+        dy = .1 * torch.randn_like(x)
+        x.requires_grad_(True)
+
+        def y_fwd():
+            return layer_norm(x, w_shape, weight, bias, 1e-5)
+        y = y_fwd()
+        ms = triton.testing.do_bench(lambda: y.backward(
+            dy, retain_graph=True), grad_to_none=[x], rep=500)
+        return ms
+
 
 os.environ["MLIR_ENABLE_DUMP"] = "1"
 os.environ["LLVM_IR_ENABLE_DUMP"] = "1"
-os.environ["MLIR_DUMP_PATH"] = "dump.out"
-benchmark.run(show_plots=True, print_data=True, save_path=".")
+os.environ["MLIR_DUMP_PATH"] = "dump.mlir"
+benchmark.run(show_plots=True, print_data=True, save_path=os.path.join(
+    os.environ.get("SLURM_TMPDIR"), os.path.basename("results")))
