@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=32000M
-#SBATCH --time=00-24:00:00
+#SBATCH --mem=16000M
+#SBATCH --time=00-03:00:00
 #SBATCH --account=rrg-mmehride
 
 nvidia-smi >nvidia-smi.txt
@@ -18,5 +18,5 @@ pip install --no-index -r requirements.txt
 
 python triton_task2.py
 
-cp $SLURM_TMPDIR/dump.out ./
+cp $SLURM_TMPDIR/dump.mlir ./
 cp -r $SLURM_TMPDIR/results ./
