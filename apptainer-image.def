@@ -1,0 +1,26 @@
+Bootstrap: docker
+From: nvidia/cuda:12.1.1-devel-ubuntu22.04
+
+%environment
+    export DEBIAN_FRONTEND=noninteractive
+
+%post
+    # Update and install dependencies
+    apt-get update && apt-get install -y \
+        python3 python3-pip python3-venv python3-dev \
+        build-essential cmake ninja-build \
+        llvm-dev clang libclang-dev \
+        git wget curl \
+        && rm -rf /var/lib/apt/lists/*
+    
+    # Upgrade pip and install Python dependencies
+    python3 -m pip install --upgrade pip setuptools wheel
+
+    # Set up workspace
+    mkdir -p /workspace/triton
+    cd /workspace/triton
+    git clone --recursive https://github.com/triton-lang/triton.git .
+    python3 -m pip install -e python
+
+%runscript
+    echo "Container is set up for Triton development."
