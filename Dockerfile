@@ -18,16 +18,20 @@ RUN apt-get update && apt-get install -y \
     git wget curl && \
     rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip and install Python dependencies as tritonuser
+# Create a virtual environment for the tritonuser
 USER tritonuser
-RUN python3 -m pip install --upgrade pip setuptools wheel pybind11
+RUN python3 -m venv /home/tritonuser/venv && \
+    /bin/bash -c "source /home/tritonuser/venv/bin/activate"
+
+# Upgrade pip and install Python dependencies in the virtual environment
+RUN /home/tritonuser/venv/bin/pip install --upgrade pip setuptools wheel pybind11
 
 # Set up workspace and clone the Triton repository
 RUN mkdir -p /home/tritonuser/triton && \
     cd /home/tritonuser/triton && \
     git clone --recursive https://github.com/triton-lang/triton.git . && \
     cd /home/tritonuser/triton && \
-    CMAKE_GENERATOR=Ninja python3 -m pip install -e ./python --no-build-isolation --verbose
+    /home/tritonuser/venv/bin/python3 -m pip install -e ./python --no-build-isolation --verbose
 
 # Set the default command
 CMD echo "Container is set up for Triton development as user tritonuser." && \

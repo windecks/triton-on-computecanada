@@ -1,26 +1,48 @@
 Bootstrap: docker
 From: nvidia/cuda:12.1.1-devel-ubuntu22.04
-
-%environment
-    export DEBIAN_FRONTEND=noninteractive
+Stage: spython-base
 
 %post
-    # Update and install dependencies
-    apt-get update && apt-get install -y \
-        python3 python3-pip python3-venv python3-dev \
-        build-essential cmake ninja-build \
-        llvm-dev clang libclang-dev \
-        git wget curl \
-        && rm -rf /var/lib/apt/lists/*
-    
-    # Upgrade pip and install Python dependencies
-    python3 -m pip install --upgrade pip setuptools wheel
+# Use NVIDIA CUDA base image with Ubuntu 22.04
 
-    # Set up workspace
-    mkdir -p /workspace/triton
-    cd /workspace/triton
-    git clone --recursive https://github.com/triton-lang/triton.git .
-    python3 -m pip install -e python
+# Set environment variables
+DEBIAN_FRONTEND=noninteractive
+CMAKE_GENERATOR=Ninja
+PATH=/home/tritonuser/.local/bin:$PATH
 
+# Create a non-root user
+useradd -m -s /bin/bash tritonuser && \
+chown -R tritonuser:tritonuser /home/tritonuser
+
+# Update and install dependencies
+apt-get update && apt-get install -y \
+python3 python3-pip python3-venv python3-dev \
+build-essential cmake ninja-build \
+llvm-dev clang libclang-dev \
+git wget curl && \
+rm -rf /var/lib/apt/lists/*
+
+# Create a virtual environment for the tritonuser
+su -  tritonuser # USER tritonuser
+python3 -m venv /home/tritonuser/venv && \
+/bin/bash -c "source /home/tritonuser/venv/bin/activate"
+
+# Upgrade pip and install Python dependencies in the virtual environment
+/home/tritonuser/venv/bin/pip install --upgrade pip setuptools wheel pybind11
+
+# Set up workspace and clone the Triton repository
+mkdir -p /home/tritonuser/triton && \
+cd /home/tritonuser/triton && \
+git clone --recursive https://github.com/triton-lang/triton.git . && \
+cd /home/tritonuser/triton && \
+/home/tritonuser/venv/bin/python3 -m pip install -e ./python --no-build-isolation --verbose
+
+# Set the default command
+%environment
+export DEBIAN_FRONTEND=noninteractive
+export CMAKE_GENERATOR=Ninja
+export PATH=/home/tritonuser/.local/bin:$PATH
 %runscript
-    echo "Container is set up for Triton development."
+exec /bin/bash exec /bin/bash "$@"
+%startscript
+exec /bin/bash exec /bin/bash "$@"
