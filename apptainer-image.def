@@ -1,37 +1,29 @@
 Bootstrap: localimage
-From: cuda_12.1.1-devel-ubuntu22.04.sif
+From: apptainer-stub.sif
 
 %files
 # Copy the Triton source code to the image
 triton /home/tritonuser/triton
-py_dependencies /home/tritonuser/py_dependencies
-apt_dependencies /home/tritonuser/apt_dependencies
-requirements.txt /home/tritonuser/requirements.txt
-packages.txt /home/tritonuser/packages.txt
-
 
 %post
-# Use NVIDIA CUDA base image with Ubuntu 22.04
 
 # Set environment variables
 DEBIAN_FRONTEND=noninteractive
 CMAKE_GENERATOR=Ninja
 PATH=/home/tritonuser/.local/bin:$PATH
 
+pip uninstall -y triton
+
 # Create a non-root user
 useradd -m -s /bin/bash tritonuser && \
 chown -R tritonuser:tritonuser /home/tritonuser
 
-# Update and install dependencies
-dpkg -i ./apt_dependencies/*.deb
-
 # Create a virtual environment for the tritonuser
 su -  tritonuser # USER tritonuser
-python3 -m venv /home/tritonuser/venv && \
+python3 -m venv --system-site-packages /home/tritonuser/venv && \
 /bin/bash -c "source /home/tritonuser/venv/bin/activate"
 
-pip install --no-index --find-links=/home/tritonuser/py_dependencies -r /home/tritonuser/requirements.txt
-cd triton && pip install --no-index --find-links=/home/tritonuser/py_dependencies -e python
+cd /home/tritonuser/triton && pip install --no-index -e python
 
 # Set the default command
 %environment

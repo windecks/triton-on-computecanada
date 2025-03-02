@@ -1,4 +1,6 @@
 torch
-triton
 pandas
 matplotlib
+setuptools
+wheel
+pybind11
