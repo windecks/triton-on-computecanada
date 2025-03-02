@@ -4,3 +4,5 @@ matplotlib
 setuptools
 wheel
 pybind11
+cmake 
+ninja

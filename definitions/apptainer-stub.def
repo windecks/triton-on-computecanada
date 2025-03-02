@@ -1,0 +1,31 @@
+Bootstrap: docker
+From: nvidia/cuda:12.1.1-devel-ubuntu22.04
+
+%files
+# Copy the Triton source code to the image
+../definitions/requirements.txt /home/tritonuser/requirements.txt
+../definitions/packages.txt /home/tritonuser/packages.txt
+
+%post
+export DEBIAN_FRONTEND=noninteractive
+
+# Use NVIDIA CUDA base image with Ubuntu 22.04
+useradd -m -s /bin/bash tritonuser && \
+chown -R tritonuser:tritonuser /home/tritonuser
+
+find /var/lib/apt/lists -type f  |xargs rm -f >/dev/null
+
+# install apt dependencies specified in packages.txt
+apt-get update && apt-get install -y $(cat /home/tritonuser/packages.txt)
+
+exec su - tritonuser -c '
+    python3 -m venv /home/tritonuser/venv && \
+    source /home/tritonuser/venv/bin/activate && \
+    pip install --no-cache-dir -r /home/tritonuser/requirements.txt && \
+    pip install --no-cache-dir setuptools wheel pybind11 cmake ninja
+'
+
+%runscript
+exec /bin/bash "$@"
+%startscript
+exec /bin/bash "$@"

@@ -1,0 +1,22 @@
+Bootstrap: localimage
+From: ../build/apptainer-stub.sif
+
+%files
+# Copy the Triton source code to the image
+../triton /home/tritonuser/triton
+
+
+%post
+export MAX_JOBS=8
+export DEBIAN_FRONTEND=noninteractive
+export CMAKE_GENERATOR=Ninja
+export PATH=/home/tritonuser/.local/bin:$PATH
+# Create a virtual environment for the tritonuser
+/bin/bash -c "source /home/tritonuser/venv/bin/activate"
+for pkg in setuptools wheel cmake ninja; do /home/tritonuser/venv/bin/pip show "$pkg" || { echo "$pkg is NOT installed"; exit 1; }; done
+/home/tritonuser/venv/bin/python3 -m pip install --no-index --no-build-isolation -e /home/tritonuser/triton/python
+
+%runscript
+exec /bin/bash "$@"
+%startscript
+exec /bin/bash "$@"
