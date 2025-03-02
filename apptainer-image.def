@@ -1,6 +1,5 @@
 Bootstrap: localimage
 From: cuda_12.1.1-devel-ubuntu22.04.sif
-Fingerprints: E483D96CC3C4B75A27D4BEC847729BB2E8757FC8
 
 %files
 # Copy the Triton source code to the image

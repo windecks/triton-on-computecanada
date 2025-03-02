@@ -12,6 +12,8 @@ pip download -r requirements.txt -d ./py_dependencies
 mkdir -p ./apt_dependencies
 # xargs -a packages.txt sudo apt-get install --download-only -y -o Dir::Cache::archives="./apt_dependencies"
 
+apptainer pull docker://nvidia/cuda:12.1.1-devel-ubuntu22.04
+
 # Step 2: Request interactive job, build apptainer
 # ask user for time they want
 srun --account=def-mmehride --cpus-per-task=3 --mem=32000M --time=01:00:00 build_apptainer.sh
