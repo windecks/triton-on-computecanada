@@ -6,3 +6,12 @@ wheel
 pybind11
 cmake 
 ninja
+autopep8
+flake8
+isort
+numpy
+scipy
+llnl-hatchet
+tabulate
+lit
+filelock

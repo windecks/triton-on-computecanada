@@ -2,19 +2,33 @@ Bootstrap: localimage
 From: ../build/apptainer-stub.sif
 
 %files
-# Copy the Triton source code to the image
-../triton /home/tritonuser/triton
+# Copy the Triton source code to the image. 
+# This copy is needed to ensure we can build stage 2 by itself in the case a user changes their source code. 
+# We do not copy over some folders (bin, third_party, wheels) as they are used by stage 1.
 
 
 %post
-export MAX_JOBS=8
+export MAX_JOBS={{ jobs }}
+echo "MAX_JOBS=$MAX_JOBS"
 export DEBIAN_FRONTEND=noninteractive
-export CMAKE_GENERATOR=Ninja
 export PATH=/home/tritonuser/.local/bin:$PATH
-# Create a virtual environment for the tritonuser
-/bin/bash -c "source /home/tritonuser/venv/bin/activate"
-for pkg in setuptools wheel cmake ninja; do /home/tritonuser/venv/bin/pip show "$pkg" || { echo "$pkg is NOT installed"; exit 1; }; done
-/home/tritonuser/venv/bin/python3 -m pip install --no-index --no-build-isolation -e /home/tritonuser/triton/python
+export HOME=/home/tritonuser
+for pkg in setuptools wheel cmake ninja; do /home/tritonuser/venv/bin/pip show "$pkg" > /dev/null || { echo "$pkg is NOT installed"; exit 1; }; done
+
+export TRITON_OFFLINE_BUILD=1
+export TRITON_PTXAS_PATH=/home/tritonuser/triton/third_party/nvidia/backend/bin/ptxas
+export TRITON_CUOBJDUMP_PATH=/home/tritonuser/triton/third_party/nvidia/backend/bin/cuobjdump
+export TRITON_NVDISASM_PATH=/home/tritonuser/triton/third_party/nvidia/backend/bin/nvdisasm
+export TRITON_CUDACRT_PATH=/home/tritonuser/triton/third_party/nvidia/backend/include
+export TRITON_CUDART_PATH=/home/tritonuser/triton/third_party/nvidia/backend/include
+export TRITON_CUPTI_PATH=/home/tritonuser/triton/third_party/nvidia/backend/include
+export PYBIND11_SYSPATH=$(ls -d /root/.triton/pybind11/pybind11-* 2>/dev/null | head -n 1)
+export JSON_SYSPATH=/root/.triton/json
+export LLVM_SYSPATH=$(ls -d /root/.triton/llvm/llvm-* 2>/dev/null | head -n 1)
+export TRITON_HOME=/root
+/home/tritonuser/venv/bin/pip install -vv \
+    --no-cache-dir --no-index --no-deps --no-build-isolation \
+    -e /home/tritonuser/triton/python
 
 %runscript
 exec /bin/bash "$@"
