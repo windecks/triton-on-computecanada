@@ -6,6 +6,7 @@ From: nvidia/cuda:12.1.1-devel-ubuntu22.04
 ../definitions/requirements.txt /home/tritonuser/requirements.txt
 ../definitions/packages.txt /home/tritonuser/packages.txt
 ../definitions/setup_stub.py /home/tritonuser/triton/python/setup_stub.py
+../triton/cmake /home/tritonuser/triton/cmake
 
 %post
 export DEBIAN_FRONTEND=noninteractive

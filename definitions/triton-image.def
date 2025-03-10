@@ -21,7 +21,7 @@ export TRITON_CUDART_PATH=/home/tritonuser/triton/third_party/nvidia/backend/inc
 export TRITON_CUPTI_PATH=/home/tritonuser/triton/third_party/nvidia/backend/include
 export PYBIND11_SYSPATH=/home/tritonuser/.triton/pybind11/pybind11-2.11.1
 export JSON_SYSPATH=/home/tritonuser/.triton/json
-export LLVM_SYSPATH=/home/tritonuser/.triton/llvm/llvm-10dc3a8e-ubuntu-x64
+export LLVM_SYSPATH=/home/tritonuser/.triton/llvm/$(ls -d /home/tritonuser/.triton/llvm/*/ | head -n 1)
 export LLVM_EXTERNAL_LIT=/home/tritonuser/venv/bin/lit
 export DEBUG=1
 
