@@ -1,7 +1,7 @@
 torch
 pandas
 matplotlib
-setuptools
+setuptools==59.6.0
 wheel
 pybind11
 cmake 

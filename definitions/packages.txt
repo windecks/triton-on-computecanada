@@ -11,3 +11,4 @@ libclang-dev
 git
 wget
 curl
+lld

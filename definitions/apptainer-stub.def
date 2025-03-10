@@ -21,11 +21,11 @@ find /var/lib/apt/lists -type f  |xargs rm -f >/dev/null
 # install apt dependencies specified in packages.txt
 apt-get update && apt-get install -y $(cat /home/tritonuser/packages.txt)
 
-exec su - tritonuser -c '
-    python3 -m venv /home/tritonuser/venv && \
-    source /home/tritonuser/venv/bin/activate && \
-    pip install --no-cache-dir -r /home/tritonuser/requirements.txt && \
-    pip install --no-cache-dir setuptools wheel pybind11 cmake ninja
+git clone --depth 1 --branch release-1.12.1 https://github.com/google/googletest.git /home/tritonuser/googletest
+
+su - tritonuser -c '
+    python3 -m venv /home/tritonuser/venv 
+    /home/tritonuser/venv/bin/pip install --no-cache-dir -r /home/tritonuser/requirements.txt
 '
 /home/tritonuser/venv/bin/python3 /home/tritonuser/triton/python/setup_stub.py
 

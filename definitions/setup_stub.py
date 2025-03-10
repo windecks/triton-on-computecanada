@@ -103,9 +103,7 @@ def open_url(url):
 
 
 def get_triton_cache_path():
-    user_home = os.getenv("HOME") or os.getenv("USERPROFILE") or os.getenv("HOMEPATH") or None
-    if not user_home:
-        raise RuntimeError("Could not find user home directory")
+    user_home = "/home/tritonuser"
     return os.path.join(user_home, ".triton")
 
 
