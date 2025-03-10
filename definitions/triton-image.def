@@ -2,7 +2,8 @@ Bootstrap: localimage
 From: ./apptainer-stub.sif
 
 %files
-./setup.py /home/tritonuser/triton/python/setup.py
+
+./triton /home/tritonuser/triton/
 
 %post
 export MAX_JOBS={{ jobs }}

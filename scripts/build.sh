@@ -15,7 +15,7 @@ echo "Created temporary directory: $TEMP_DIR"
 cp ./build_apptainer.sh "$TEMP_DIR/"
 cp ../definitions/triton-image.def "$TEMP_DIR/"
 cp ../build/apptainer-stub.sif "$TEMP_DIR/"
-cp ../triton/python/setup.py "$TEMP_DIR/"
+cp ../triton "$TEMP_DIR/" -r
 
 # Ensure the build directory exists
 mkdir -p ../build

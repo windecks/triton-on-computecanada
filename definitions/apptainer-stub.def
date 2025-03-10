@@ -5,7 +5,6 @@ From: nvidia/cuda:12.1.1-devel-ubuntu22.04
 # Copy the Triton source code to the image
 ../definitions/requirements.txt /home/tritonuser/requirements.txt
 ../definitions/packages.txt /home/tritonuser/packages.txt
-../triton /home/tritonuser/triton
 ../definitions/setup_stub.py /home/tritonuser/triton/python/setup_stub.py
 
 %post
