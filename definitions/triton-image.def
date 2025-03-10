@@ -2,8 +2,15 @@ Bootstrap: localimage
 From: ./apptainer-stub.sif
 
 %files
-
-./triton /home/tritonuser/triton/
+./triton/bin /home/tritonuser/triton/bin
+./triton/cmake /home/tritonuser/triton/cmake
+./triton/include /home/tritonuser/triton/include
+./triton/lib /home/tritonuser/triton/lib
+./triton/python /home/tritonuser/triton/python
+./triton/test /home/tritonuser/triton/test
+# cannot include third_party since we have binaries there
+./triton/unittest /home/tritonuser/triton/unittest
+./triton/utils /home/tritonuser/triton/utils
 
 %post
 export MAX_JOBS={{ jobs }}
@@ -21,7 +28,7 @@ export TRITON_CUDART_PATH=/home/tritonuser/triton/third_party/nvidia/backend/inc
 export TRITON_CUPTI_PATH=/home/tritonuser/triton/third_party/nvidia/backend/include
 export PYBIND11_SYSPATH=/home/tritonuser/.triton/pybind11/pybind11-2.11.1
 export JSON_SYSPATH=/home/tritonuser/.triton/json
-export LLVM_SYSPATH=/home/tritonuser/.triton/llvm/$(ls -d /home/tritonuser/.triton/llvm/*/ | head -n 1)
+export LLVM_SYSPATH=$(ls -d /home/tritonuser/.triton/llvm/*/ | head -n 1)
 export LLVM_EXTERNAL_LIT=/home/tritonuser/venv/bin/lit
 export DEBUG=1
 
