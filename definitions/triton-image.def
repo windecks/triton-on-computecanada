@@ -1,18 +1,11 @@
 Bootstrap: localimage
-From: ./apptainer-stub.sif
+From: apptainer-stub.sif
 
-%files
-./triton/bin /home/tritonuser/triton/bin
-./triton/cmake /home/tritonuser/triton/cmake
-./triton/include /home/tritonuser/triton/include
-./triton/lib /home/tritonuser/triton/lib
-./triton/python /home/tritonuser/triton/python
-./triton/test /home/tritonuser/triton/test
-# cannot include third_party since we have binaries there
-./triton/unittest /home/tritonuser/triton/unittest
-./triton/utils /home/tritonuser/triton/utils
+%setup
+mkdir -p ${APPTAINER_ROOTFS}/home/tritonuser/triton && cp -ru ./triton/. ${APPTAINER_ROOTFS}/home/tritonuser/triton
 
 %post
+
 export MAX_JOBS={{ jobs }}
 echo "MAX_JOBS=$MAX_JOBS"
 export DEBIAN_FRONTEND=noninteractive

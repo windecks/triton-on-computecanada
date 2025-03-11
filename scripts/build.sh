@@ -17,9 +17,6 @@ cp ../definitions/triton-image.def "$TEMP_DIR/"
 cp ../build/apptainer-stub.sif "$TEMP_DIR/"
 cp ../triton "$TEMP_DIR/" -r
 
-# Ensure the build directory exists
-mkdir -p ../build
-
 # Submit the job from the temporary directory
 sbatch --account=rrg-mmehride --gres=gpu:1 --cpus-per-task=8 --mem=22000M --time=00:15:00 --chdir="$TEMP_DIR" "$TEMP_DIR/build_apptainer.sh"
 

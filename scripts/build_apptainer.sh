@@ -16,6 +16,12 @@ fi
 # Use the definition file in the current directory
 DEFINITION_FILE="triton-image.def"
 
+# Preconditions: Verify triton folder exists
+if [ ! -d "triton" ]; then
+    echo "Error: triton folder not found. Please clone the triton repository."
+    exit 1
+fi
+
 module load apptainer
 apptainer build --build-arg jobs=$MAX_JOBS --nv --disable-cache --fakeroot --fix-perms "$SLURM_TMPDIR/triton-image.sif" "$DEFINITION_FILE" 2>&1 | tee "$SLURM_TMPDIR/apptainer.log"
 
