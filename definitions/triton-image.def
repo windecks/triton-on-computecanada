@@ -2,7 +2,8 @@ Bootstrap: localimage
 From: apptainer-stub.sif
 
 %setup
-mkdir -p ${APPTAINER_ROOTFS}/home/tritonuser/triton && cp -ru ./triton/. ${APPTAINER_ROOTFS}/home/tritonuser/triton
+mkdir -p "${APPTAINER_ROOTFS}/home/tritonuser/triton"
+rsync -a --info=progress2 ./triton/ "${APPTAINER_ROOTFS}/home/tritonuser/triton"
 
 %post
 
