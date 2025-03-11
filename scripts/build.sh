@@ -17,7 +17,7 @@ echo "Copying files to temporary directory..."
 cp ./build_apptainer.sh "$TEMP_DIR/"
 cp ../definitions/triton-image.def "$TEMP_DIR/"
 cp ../build/apptainer-stub.sif "$TEMP_DIR/"
-rsync -a --info=progress2 ../triton/ "$TEMP_DIR/triton/"
+rsync -rltD --info=progress2 ../triton/ "$TEMP_DIR/triton/"
 
 # Submit the job from the temporary directory
 sbatch --account=rrg-mmehride --gres=gpu:1 --cpus-per-task=8 --mem=25000M --time=00:20:00 --chdir="$TEMP_DIR" "$TEMP_DIR/build_apptainer.sh"
